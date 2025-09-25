@@ -102,7 +102,6 @@ int main(int argc, char* argv[]) {
     }
     else {
         std::cerr << "恢复哈希表失败" << std::endl;
-        return 1;
     }
 
     std::unordered_set<std::string> text_extension(config.text_extensions.begin(), config.text_extensions.end());
