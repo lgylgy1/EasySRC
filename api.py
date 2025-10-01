@@ -108,7 +108,7 @@ def call_llm_api(config: Config, prompt: str, system_prompt: Optional[str] = Non
     except http.client.HTTPException as e:
         return {"error": f"HTTP连接错误：{str(e)}"}
     except TimeoutError:
-        return {"error": "API请求超时（超过30秒）"}
+        return {"error": "API请求超时（超过60秒）"}
     except Exception as e:
         return {"error": f"请求过程出错：{str(e)}"}
 
