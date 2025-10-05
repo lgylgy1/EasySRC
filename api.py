@@ -3,8 +3,9 @@ import json
 from urllib.parse import urlparse
 from typing import Dict, Optional, Any
 from config import Config  # 假设前面的Config类定义在config.py中
+import asyncio
 
-def call_llm_api(config: Config, prompt: str, system_prompt: Optional[str] = None, 
+async def call_llm_api(config: Config, prompt: str, system_prompt: Optional[str] = None, 
                 temperature: float = 0.7, extra_params: Optional[Dict] = None) -> Dict:
     """
     调用大模型API的通用函数（基于Config配置）
@@ -97,6 +98,13 @@ def call_llm_api(config: Config, prompt: str, system_prompt: Optional[str] = Non
                 "status_code": status_code,
                 "response": response_json
             }
+        # with open("response.json", "w", encoding="utf-8") as f:
+        #     f.write(json.dumps(response_json, indent=4))
+        # with open("prompt.json", "w", encoding="utf-8") as f:
+        #     f.write(json.dumps(request_data, indent=4))
+        with open("api_result.txt", "w", encoding="utf-8") as f:
+            f.write("prompt: " + prompt + "\n\n" + "response: " + response_json.get("choices", [{}])[0].get("message", {}).get("content") + "\n")
+            # print("prompt: " + prompt + "\n\n" + "response: " + response_json.get("choices", [{}])[0].get("message", {}).get("content") + "\n")
         # 正常响应返回
         return {
             "success": True,
@@ -121,13 +129,13 @@ def call_llm_api(config: Config, prompt: str, system_prompt: Optional[str] = Non
 #         print("配置加载成功，准备调用API...")
         
 #         # 调用大模型API
-#         result = call_llm_api(
+#         result = asyncio.run(call_llm_api(
 #             config=config,
 #             system_prompt="你是一个助手，请用简洁的语言回答问题",
 #             prompt="介绍一下Python的装饰器",
 #             temperature=0.5,
 #             extra_params={"top_p": 0.9}  # 额外参数
-#         )
+#         ))
         
 #         # 处理返回结果
 #         if result.get("success"):

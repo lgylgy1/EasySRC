@@ -12,7 +12,7 @@ def filter_comment_from_code(code: str, code_type: str) -> str:
     # 根据文件类型选择对应的注释处理逻辑
     if code_type == ".py":
         return _filter_python_comment(code)
-    elif code_type in (".js", ".java", ".c", ".cpp", ".h", ".hpp", ".c++"):
+    elif code_type in (".js", ".java", ".c", ".cpp", ".h", ".hpp", ".c++", ""):
         return _filter_c_style_comment(code)
     elif code_type == ".html":
         return _filter_html_comment(code)

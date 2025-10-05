@@ -1,45 +1,31 @@
 import os
+import time
 from config import Config
 from file import read_files_by_extensions
 from init_project import config, logger, table, params
 from file_process import FileProcess
 import asyncio
-from typing import Dict
+from typing import Dict, List
 from json_dict import save_dict_to_json
+from check_comment import check_code, check_code_with_content, filter_space_and_comment
 
-async def split_file_and_process(file_path: str, file_content: str) -> bool:
+async def split_file_and_process(file_path: str, file_content: List[str]) -> bool:
+    start_time = time.strftime("%H:%M:%S")
+    print(f"[{start_time}] 开始处理文件：{file_path}")
     content=""
     success=True
     for line in file_content:
-        if ((len(content)>5000 and line[0]!=" ") or (line=="" and len(content)>2500)) and content!="":
+        if ((len(content)>5000 and line!="" and line[0]!=" ") or (line=="" and len(content)>2500)) and content!="":
             file_process=FileProcess(file_path, content)
             success=await file_process.process() and success
-            content=""
+            content=line+"\n" if line!="" else ""
         else:
             content+=(line+"\n")
     file_process=FileProcess(file_path, content)
     success=await file_process.process() and success
+    end_time = time.strftime("%H:%M:%S")
+    print(f"[{end_time}] 结束处理文件：{file_path}")
     return success
-
-async def process_file_with_semaphore(file_path: str, file_content: str, semaphore: asyncio.Semaphore) -> bool:
-    """通过信号量控制并发的文件处理函数"""
-    async with semaphore:  # 限制并发数
-        return await split_file_and_process(file_path, file_content)
-
-
-async def main_process(files: Dict[str, str], max_concurrent: int = 5):
-    """并发处理所有文件，控制最大并发数"""
-    # 创建信号量，限制最大并发数为 5
-    semaphore = asyncio.Semaphore(max_concurrent)
-    
-    # 创建所有任务（不立即执行）
-    tasks = [
-        process_file_with_semaphore(file_path, content, semaphore)
-        for file_path, content in files.items()
-    ]
-    
-    # 并发执行所有任务，等待全部完成
-    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     if params['verbose']:
@@ -51,12 +37,28 @@ if __name__ == "__main__":
         print(config)
     
     files = read_files_by_extensions(params['input'], filter_comment=True)
-    print(f"共读取{len(files)}个文件，将以最大并发数 5 处理")
-
-    # 运行并发处理主函数
-    # asyncio.run(main_process(files, max_concurrent=5))
+    comment_files = read_files_by_extensions(params['output'], filter_comment=True)
     for file_path, content in files.items():
-        success=asyncio.run(split_file_and_process(file_path, content))
+        code_type = os.path.splitext(file_path)[1].lower()
+        comment_path=os.path.join(params['output'], os.path.relpath(file_path, params['input'])) if params["input"]!=file_path else os.path.join(params['output'], os.path.basename(file_path))
+        if file_path in comment_files or (comment_path in comment_files and check_code_with_content("".join(content),"".join(comment_files[comment_path]), code_type)):
+            print(f"文件{file_path}已处理或无需处理，跳过")
+            continue
+        elif comment_path in comment_files:
+            text=""
+            comment_content=filter_space_and_comment("".join(comment_files[comment_path]), code_type)
+            comment_valid=False
+            for i in range(len(content)):
+                text+=filter_space_and_comment(content[i], code_type)
+                if len(text)==len(comment_content) and text==comment_content:
+                    success=asyncio.run(split_file_and_process(file_path, content[i+1:]))
+                    comment_valid=True
+                    break
+            if not comment_valid:
+                with open(comment_path, "w", encoding="utf-8") as f:
+                    f.write("")
+        else:
+            success=asyncio.run(split_file_and_process(file_path, content))
 
     save_dict_to_json(table, "table.json")
     print("处理完成！")
